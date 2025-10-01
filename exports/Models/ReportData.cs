@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq; // .ToList()를 사용하기 위해 추가
 using PureGIS_Geo_QC.Models;
 
 namespace PureGIS_Geo_QC.Exports.Models
@@ -9,44 +10,14 @@ namespace PureGIS_Geo_QC.Exports.Models
     /// </summary>
     public class ReportData
     {
-        /// <summary>
-        /// 보고서 생성 일시
-        /// </summary>
         public DateTime ReportDate { get; set; } = DateTime.Now;
-
-        /// <summary>
-        /// 검사 파일명
-        /// </summary>
         public string FileName { get; set; } = "";
-
-        /// <summary>
-        /// 프로젝트명
-        /// </summary>
         public string ProjectName { get; set; } = "";
-
-        /// <summary>
-        /// 검사 결과 리스트
-        /// </summary>
         public List<ColumnValidationResult> ValidationResults { get; set; } = new List<ColumnValidationResult>();
-
-        /// <summary>
-        /// 총 필드 수
-        /// </summary>
         public int TotalCount => ValidationResults?.Count ?? 0;
+        public int NormalCount => ValidationResults?.Count(r => r.Status == "정상") ?? 0;
+        public int ErrorCount => ValidationResults?.Count(r => r.Status == "오류") ?? 0;
 
-        /// <summary>
-        /// 정상 필드 수
-        /// </summary>
-        public int NormalCount => ValidationResults?.FindAll(r => r.Status == "정상").Count ?? 0;
-
-        /// <summary>
-        /// 오류 필드 수
-        /// </summary>
-        public int ErrorCount => ValidationResults?.FindAll(r => r.Status == "오류").Count ?? 0;
-
-        /// <summary>
-        /// 정상률 (백분율)
-        /// </summary>
         public string SuccessRate
         {
             get
@@ -57,21 +28,21 @@ namespace PureGIS_Geo_QC.Exports.Models
         }
 
         /// <summary>
-        /// 비고 정보 생성
+        /// 비고 정보 생성 (오류 개수 포함 버전)
         /// </summary>
-        /// <param name="result">검사 결과</param>
-        /// <returns>비고 텍스트</returns>
         public static string GetRemarks(ColumnValidationResult result)
         {
             if (result == null) return "";
 
             var remarks = new List<string>();
 
-            if (!result.IsFieldFound) remarks.Add("필드없음");
-            if (!result.IsTypeCorrect) remarks.Add("타입불일치");
-            if (!result.IsLengthCorrect) remarks.Add("길이불일치");
+            if (result.IsFieldFound == false) remarks.Add("필드없음");
+            if (result.IsTypeCorrect == false) remarks.Add("타입불일치");
+            if (result.IsLengthCorrect == false) remarks.Add("길이불일치");
+            if (result.IsNotNullCorrect == false) remarks.Add($"NULL({result.NotNullErrorCount}개)");
+            if (result.IsCodeCorrect == false) remarks.Add($"코드({result.CodeErrorCount}개)");
 
-            return string.Join(" ", remarks);
+            return string.Join(", ", remarks);
         }
     }
 }

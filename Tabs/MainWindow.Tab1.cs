@@ -198,17 +198,17 @@ namespace PureGIS_Geo_QC_Standalone
                 }
             }
 
-            // InputDialog를 사용하여 사용자에게 테이블 이름을 입력받습니다.
-            var dialog = new InputDialog("새 테이블 이름을 입력하세요.", "새 테이블");
+            // InputDialog 대신 새로 만든 NewTableDialog를 사용합니다.
+            var dialog = new NewTableDialog();
             dialog.Owner = this;
 
             if (dialog.ShowDialog() == true)
             {
                 var newTable = new TableDefinition
                 {
-                    // 고유 ID는 자동으로 생성하고, TableName은 입력받은 값으로 설정합니다.
-                    TableId = "TBL_" + DateTime.Now.ToString("HHmmss"),
-                    TableName = dialog.InputText
+                    // 대화 상자에서 입력받은 값을 각각 할당합니다.
+                    TableId = dialog.TableId,
+                    TableName = dialog.TableName
                 };
 
                 targetCategory.Tables.Add(newTable);
@@ -422,54 +422,24 @@ namespace PureGIS_Geo_QC_Standalone
             }
         }
         /// <summary>
-        /// 현재 선택된 테이블에 컬럼 붙여넣기
+        /// 현재 선택된 테이블(StandardGrid)에 엑셀 스타일로 데이터를 붙여넣습니다.
         /// </summary>
         private void PasteColumnsToCurrentTable()
         {
-            try
+            // 1. 붙여넣기 전에 테이블이 선택되었는지 먼저 확인합니다.
+            if (currentSelectedTable == null)
             {
-                if (currentSelectedTable == null)
-                {
-                    CustomMessageBox.Show(this, "알림", "컬럼을 추가할 테이블을 먼저 선택하세요.");
-                    return;
-                }
-
-                string clipboardText = Clipboard.GetText();
-                if (string.IsNullOrWhiteSpace(clipboardText))
-                {
-                    CustomMessageBox.Show(this, "알림", "클립보드가 비어있습니다.");
-                    return;
-                }
-
-                // ClipboardHelper를 사용하여 파싱
-                var newColumns = ClipboardHelper.ParseColumnsFromClipboard(clipboardText);
-
-                if (newColumns.Count > 0)
-                {
-                    // ===== 👇 [수정] AddRange 대신 하나씩 추가하도록 변경합니다. =====
-                    if (currentSelectedTable.Columns == null)
-                    {
-                        currentSelectedTable.Columns = new BindingList<ColumnDefinition>();
-                    }
-
-                    foreach (var col in newColumns)
-                    {
-                        currentSelectedTable.Columns.Add(col);
-                    }
-
-                    // BindingList를 사용하면 UI가 자동으로 업데이트되므로 RefreshSelectedTableGrid() 호출은 필요 없습니다.
-                    ShowTableInfo(currentSelectedTable); // 테이블 정보(컬럼 개수 등) 업데이트
-                    CustomMessageBox.Show(this, "완료", $"{newColumns.Count}개의 컬럼이 '{currentSelectedTable.TableName}' 테이블에 추가되었습니다.");
-                }
-                else
-                {
-                    CustomMessageBox.Show(this, "오류", "올바른 컬럼 데이터를 찾을 수 없습니다.\n\n형식: 컬럼ID [Tab] 컬럼명 [Tab] 타입 [Tab] 길이 [Tab] NOTNULL(Y/N) [Tab] 코드명");
-                }
+                CustomMessageBox.Show(this, "알림", "데이터를 붙여넣을 테이블을 먼저 선택하세요.");
+                return;
             }
-            catch (Exception ex)
-            {
-                CustomMessageBox.Show(this, "파싱 오류", $"컬럼 데이터 붙여넣기 중 오류가 발생했습니다:\n\n{ex.Message}");
-            }
+
+            // 2. MainWindow.xaml.cs에 이미 만들어져 있는
+            //    강력한 엑셀 붙여넣기 핸들러를 호출합니다.
+            //    'StandardGrid'를 매개변수로 넘겨주기만 하면 됩니다.
+            HandleExcelPaste(StandardGrid);
+
+            // 3. 붙여넣기 후 변경된 컬럼 개수를 UI에 반영합니다.
+            ShowTableInfo(currentSelectedTable);
         }
         // =======================================================
         // ✨ 4. TreeView 드래그 앤 드롭 로직
@@ -532,6 +502,16 @@ namespace PureGIS_Geo_QC_Standalone
                         UpdateTableList(); // UI 새로고침
                     }
                 }
+            }
+        }
+        private void StandardGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            // Ctrl+V가 눌렸는지 확인합니다.
+            if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                // 기존의 붙여넣기 기능을 그대로 호출합니다.
+                PasteColumnsToCurrentTable();
+                e.Handled = true; // 이벤트 처리가 완료되었음을 알립니다.
             }
         }
     }

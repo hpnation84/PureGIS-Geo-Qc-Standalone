@@ -130,24 +130,28 @@
     <Compile Include="exports\Models\ReportData.cs" />
     <Compile Include="exports\PdfSharpExporter.cs" />
     <Compile Include="exports\WordExporter.cs" />
-    <Compile Include="helper\ClipboardHelper.cs" />
+    <Compile Include="Helper\ClipboardHelper.cs" />
     <Compile Include="managers\ProjectManager.cs" />
     <Compile Include="managers\UpdateManager.cs" />
-    <Compile Include="models\DataModels.cs" />
+    <Compile Include="Models\DataModels.cs" />
+    <Compile Include="Tabs\Handlers\MainWindow.Tab1.Grid.cs" />
     <Compile Include="Tabs\MainWindow.Tab1.cs" />
     <Compile Include="Tabs\MainWindow.Tab4.cs" />
     <Compile Include="Tabs\MainWindow.Validation.cs" />
-    <Compile Include="wpf\BoolToCheckMarkConverter.cs" />
-    <Compile Include="wpf\CustomMessageBox.xaml.cs">
+    <Compile Include="WPF\BoolToCheckMarkConverter.cs" />
+    <Compile Include="WPF\CustomMessageBox.xaml.cs">
       <DependentUpon>CustomMessageBox.xaml</DependentUpon>
     </Compile>
-    <Compile Include="wpf\InputDialog.xaml.cs">
+    <Compile Include="WPF\InputDialog.xaml.cs">
       <DependentUpon>InputDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="wpf\LicenseLoginWindow.xaml.cs">
+    <Compile Include="WPF\LicenseLoginWindow.xaml.cs">
       <DependentUpon>LicenseLoginWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="wpf\LicenseManager.cs" />
+    <Compile Include="WPF\LicenseManager.cs" />
+    <Compile Include="WPF\NewTableDialog.xaml.cs">
+      <DependentUpon>NewTableDialog.xaml</DependentUpon>
+    </Compile>
     <Page Include="AboutWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -164,15 +168,19 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="wpf\CustomMessageBox.xaml">
+    <Page Include="WPF\CustomMessageBox.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="wpf\InputDialog.xaml">
+    <Page Include="WPF\InputDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="wpf\LicenseLoginWindow.xaml">
+    <Page Include="WPF\LicenseLoginWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="WPF\NewTableDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -212,7 +220,10 @@
     <Resource Include="Geo_QC.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="wpf\Geo_QC.png" />
+    <Resource Include="WPF\Geo_QC.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="img\Geo_QC_Icon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

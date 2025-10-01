@@ -198,6 +198,7 @@ namespace PureGIS_Geo_QC_Standalone
             {
                 currentProject = value;
                 UpdateProjectUI();
+                RefreshCodeSetList();
             }
         }
         /// <summary>

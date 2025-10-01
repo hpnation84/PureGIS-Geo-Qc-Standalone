@@ -2,9 +2,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using PureGIS_Geo_QC.Models;
 using PureGIS_Geo_QC.WPF;
 
@@ -218,9 +220,7 @@ namespace PureGIS_Geo_QC_Standalone
                     return;
                 }
 
-                selectedCodeSet.Codes.Add(new CodeValue { Code = newCode, Description = newDesc });
-                CodeDataGrid.ItemsSource = null;
-                CodeDataGrid.ItemsSource = selectedCodeSet.Codes.OrderBy(c => c.Code);
+                selectedCodeSet.Codes.Add(new CodeValue { Code = newCode, Description = newDesc });               
             }
             else
             {
@@ -255,8 +255,8 @@ namespace PureGIS_Geo_QC_Standalone
                 selectedCodeValue.Code = newCode;
                 selectedCodeValue.Description = newDesc;
 
-                CodeDataGrid.ItemsSource = null;
-                CodeDataGrid.ItemsSource = selectedCodeSet.Codes.OrderBy(c => c.Code);
+                // BindingList의 내용이 바뀌었음을 UI에 다시 알려주기 위해 Refresh()를 호출합니다.
+                (CodeDataGrid.ItemsSource as ICollectionView)?.Refresh();
             }
             else
             {
@@ -273,15 +273,23 @@ namespace PureGIS_Geo_QC_Standalone
             {
                 if (CustomMessageBox.Show(this, "삭제 확인", $"'{selectedCodeValue.Code}' 코드를 삭제하시겠습니까?", true) == true)
                 {
-                    selectedCodeSet.Codes.Remove(selectedCodeValue);
-                    CodeDataGrid.ItemsSource = null;
-                    CodeDataGrid.ItemsSource = selectedCodeSet.Codes.OrderBy(c => c.Code);
+                    selectedCodeSet.Codes.Remove(selectedCodeValue);                    
                 }
             }
             else
             {
                 CustomMessageBox.Show(this, "알림", "삭제할 코드를 선택하세요.");
             }
-        }        
+        }
+        private void CodeDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            // Ctrl+V가 눌렸는지 확인합니다.
+            if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                // 기존의 붙여넣기 기능을 그대로 호출합니다.
+                PasteCodesToCurrentCodeSet();
+                e.Handled = true; // 이벤트 처리가 완료되었음을 알립니다.
+            }
+        }
     }
 }

@@ -156,20 +156,20 @@ namespace PureGIS_Geo_QC_Standalone
         /// </summary>
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-            {
-                // ===== 👇 [수정] 탭 인덱스에 따라 다른 메서드를 호출하도록 변경 =====
-                switch (MainTabControl.SelectedIndex)
-                {
-                    case 0: // 기준 정의 탭
-                        PasteColumnsToCurrentTable();
-                        break;
-                    case 1: // 코드 관리 탭
-                        PasteCodesToCurrentCodeSet();
-                        break;
-                }
-                e.Handled = true;
-            }
+            // if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            // {
+            //     // 현재 활성화된 탭에 따라 대상 그리드를 선택하고 새 붙여넣기 함수 호출
+            //     switch (MainTabControl.SelectedIndex)
+            //     {
+            //         case 0: // 기준 정의 탭
+            //             HandleExcelPaste(StandardGrid);
+            //             break;
+            //         case 1: // 코드 관리 탭
+            //             HandleExcelPaste(CodeDataGrid);
+            //             break;
+            //     }
+            //     e.Handled = true; // 이벤트 처리 완료
+            // }
         }
         #endregion
     }

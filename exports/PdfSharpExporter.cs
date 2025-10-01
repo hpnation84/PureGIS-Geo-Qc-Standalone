@@ -19,6 +19,13 @@ namespace PureGIS_Geo_QC.Exports
             return await Task.Run(() => Export(multiReport, filePath));
         }
 
+        // bool? 타입을 보고서용 문자로 변환하는 헬퍼 함수
+        private string ConvertBoolToSymbol(bool? value)
+        {
+            if (!value.HasValue) return "-";
+            return value.Value ? "✓" : "✗";
+        }
+
         public bool Export(MultiFileReport multiReport, string filePath)
         {
             try
@@ -47,7 +54,7 @@ namespace PureGIS_Geo_QC.Exports
 
                 foreach (var reportData in multiReport.FileResults)
                 {
-                    if (yPos > page.Height - 200) // 페이지 여유 공간 확인
+                    if (yPos > page.Height - 150) // 페이지 여유 공간 확인
                     {
                         DrawFooter(graphics, smallFont, leftMargin, pageWidth, page.Height);
                         page = document.AddPage();
@@ -98,7 +105,6 @@ namespace PureGIS_Geo_QC.Exports
             graphics.DrawString($"파일별 상세 결과: {reportData.FileName}", headerFont, XBrushes.DarkBlue, leftMargin, yPos);
             yPos += 25;
 
-            // 요약 테이블
             var headers = new[] { "전체 필드", "정상", "오류", "정상률" };
             var data = new[] { reportData.TotalCount.ToString(), reportData.NormalCount.ToString(), reportData.ErrorCount.ToString(), reportData.SuccessRate };
             double colWidth = pageWidth / 4;
@@ -120,12 +126,13 @@ namespace PureGIS_Geo_QC.Exports
             }
             yPos += 25;
 
-            // 상세 결과 테이블
-            var detailHeaders = new[] { "상태", "기준컬럼ID", "기준컬럼명", "기준타입", "기준길이", "찾은필드명", "파일타입", "파일길이", "비고" };
-            var colWidths = new double[] { 40, 70, 90, 60, 50, 70, 60, 50, 90 };
+            // 상세 결과 테이블 헤더 및 너비 수정
+            var detailHeaders = new[] { "상태", "기준컬럼ID", "기준타입", "기준길이", "파일타입", "파일길이", "NULL허용", "코드일치", "NULL오류", "코드오류", "비고" };
+            var colWidths = new double[] { 40, 70, 50, 50, 50, 50, 50, 50, 50, 50, 150 };
             double xPos = leftMargin;
-            var headerBgRect = new XRect(leftMargin, yPos, pageWidth, 18);
+            var headerBgRect = new XRect(leftMargin, yPos, colWidths.Sum(), 18); // 너비 합산
             graphics.DrawRectangle(XBrushes.LightGray, headerBgRect);
+
             for (int i = 0; i < detailHeaders.Length; i++)
             {
                 var rect = new XRect(xPos, yPos, colWidths[i], 18);
@@ -137,14 +144,27 @@ namespace PureGIS_Geo_QC.Exports
 
             foreach (var result in reportData.ValidationResults)
             {
-                if (yPos > pageHeight - 60) break; // 페이지 넘어가면 중단
+                if (yPos > pageHeight - 60) break;
                 xPos = leftMargin;
-                var rowData = new[] { result.Status ?? "", result.Std_ColumnId ?? "", result.Std_ColumnName ?? "", result.Std_Type ?? "", result.Std_Length ?? "", result.Found_FieldName ?? "", result.Cur_Type ?? "", result.Cur_Length ?? "", ReportData.GetRemarks(result) };
+                // 상세 결과 데이터 수정
+                var rowData = new[] {
+                    result.Status ?? "",
+                    result.Std_ColumnId ?? "",
+                    result.Std_Type ?? "",
+                    result.Std_Length ?? "",
+                    result.Cur_Type ?? "",
+                    result.Cur_Length ?? "",
+                    ConvertBoolToSymbol(result.IsNotNullCorrect),
+                    ConvertBoolToSymbol(result.IsCodeCorrect),
+                    result.NotNullErrorCount > 0 ? result.NotNullErrorCount.ToString() : "-",
+                    result.CodeErrorCount > 0 ? result.CodeErrorCount.ToString() : "-",
+                    ReportData.GetRemarks(result)
+                };
                 for (int i = 0; i < rowData.Length; i++)
                 {
                     var rect = new XRect(xPos, yPos, colWidths[i], 15);
                     graphics.DrawRectangle(XPens.Black, rect);
-                    var brush = (i == 0 && result.Status == "오류") ? XBrushes.Red : XBrushes.Black;
+                    var brush = (i == 0 && result.Status == "오류") ? XBrushes.Red : (i > 7 && rowData[i] != "-") ? XBrushes.Red : XBrushes.Black;
                     DrawCenteredText(graphics, rowData[i], smallFont, brush, rect);
                     xPos += colWidths[i];
                 }
@@ -155,9 +175,9 @@ namespace PureGIS_Geo_QC.Exports
 
         private void DrawFooter(XGraphics graphics, XFont smallFont, double leftMargin, double pageWidth, double pageHeight)
         {
-            var footerText = $"보고서 생성: {DateTime.Now:yyyy-MM-dd HH:mm:ss} | PureGIS GEO-QC v1.0 | {ExporterName}";
+            var footerText = $"보고서 생성: {DateTime.Now:yyyy-MM-dd HH:mm:ss} | PureGIS GEO-QC";
             var footerY = pageHeight - 30;
-            graphics.DrawString(footerText, smallFont, XBrushes.Gray, leftMargin + pageWidth - 300, footerY);
+            graphics.DrawString(footerText, smallFont, XBrushes.Gray, leftMargin, footerY);
         }
 
         private void DrawCenteredText(XGraphics graphics, string text, XFont font, XBrush brush, double left, double width, double y)

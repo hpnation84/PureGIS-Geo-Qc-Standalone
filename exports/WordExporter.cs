@@ -19,6 +19,12 @@ namespace PureGIS_Geo_QC.Exports
             return await Task.Run(() => Export(multiReport, filePath));
         }
 
+        private string ConvertBoolToSymbol(bool? value)
+        {
+            if (!value.HasValue) return "-";
+            return value.Value ? "✓" : "✗";
+        }
+
         public bool Export(MultiFileReport multiReport, string filePath)
         {
             try
@@ -51,64 +57,59 @@ namespace PureGIS_Geo_QC.Exports
 
         private void CreateTitle(Body body, string projectName)
         {
-            var titleParagraph = body.AppendChild(new Paragraph());
-            var titleRun = titleParagraph.AppendChild(new Run());
-            titleRun.AppendChild(new RunProperties(new Bold(), new FontSize() { Val = "28" }, new RunFonts() { Ascii = "맑은 고딕", EastAsia = "맑은 고딕" }, new Color() { Val = "1F497D" }));
-            titleRun.AppendChild(new Text($"[{projectName}] SHP데이터 형식 결과 보고서"));
-            titleParagraph.ParagraphProperties = new ParagraphProperties(new Justification() { Val = JustificationValues.Center }, new SpacingBetweenLines() { After = "240" });
-            var separatorParagraph = body.AppendChild(new Paragraph());
-            separatorParagraph.ParagraphProperties = new ParagraphProperties(new ParagraphBorders(new TopBorder() { Val = BorderValues.Single, Size = 6, Color = "1F497D" }));
-            separatorParagraph.AppendChild(new Run(new Text("")));
+            var p = body.AppendChild(new Paragraph());
+            var r = p.AppendChild(new Run());
+            r.AppendChild(new RunProperties(new Bold(), new FontSize() { Val = "32" }, new RunFonts() { Ascii = "맑은 고딕", EastAsia = "맑은 고딕" }, new Color() { Val = "1F497D" }));
+            r.AppendChild(new Text($"[{projectName}] SHP데이터 형식 결과 보고서"));
+            p.ParagraphProperties = new ParagraphProperties(new Justification() { Val = JustificationValues.Center }, new SpacingBetweenLines() { After = "240" });
         }
 
         private void CreateOverallSummarySection(Body body, MultiFileReport multiReport)
         {
             CreateSectionTitle(body, "전체 검사 요약");
-            var infoTable = body.AppendChild(new Table());
-            ConfigureTable(infoTable, new[] { "2000", "4000" });
-            AddInfoRow(infoTable, "검사 실행일", multiReport.ReportDate.ToString("yyyy년 MM월 dd일 HH시 mm분"));
-            AddInfoRow(infoTable, "총 파일 수", $"{multiReport.TotalFiles} 개");
-            AddInfoRow(infoTable, "전체 컬럼 수", $"{multiReport.TotalColumns} 개");
-            AddInfoRow(infoTable, "전체 성공률", multiReport.OverallSuccessRate);
+            var table = body.AppendChild(new Table());
+            ConfigureTable(table);
+            AddInfoRow(table, "검사 실행일", multiReport.ReportDate.ToString("yyyy년 MM월 dd일 HH시 mm분"));
+            AddInfoRow(table, "총 파일 수", $"{multiReport.TotalFiles} 개");
+            AddInfoRow(table, "전체 성공률", multiReport.OverallSuccessRate);
             body.AppendChild(new Paragraph());
         }
 
         private void CreateFileDetailSection(Body body, ReportData reportData)
         {
             CreateSectionTitle(body, $"파일별 상세 결과: {reportData.FileName}");
+
             var summaryTable = body.AppendChild(new Table());
-            ConfigureTable(summaryTable, new[] { "1500", "1500", "1500", "1500" });
+            ConfigureTable(summaryTable);
             var headerRow = summaryTable.AppendChild(new TableRow());
             AddTableCell(headerRow, "전체 필드", true);
             AddTableCell(headerRow, "정상", true);
             AddTableCell(headerRow, "오류", true);
             AddTableCell(headerRow, "정상률", true);
             var dataRow = summaryTable.AppendChild(new TableRow());
-            AddTableCell(dataRow, reportData.TotalCount.ToString());
-            AddTableCell(dataRow, reportData.NormalCount.ToString(), false, "00B050");
-            AddTableCell(dataRow, reportData.ErrorCount.ToString(), false, "C5504B");
-            AddTableCell(dataRow, reportData.SuccessRate);
+            AddTableCell(dataRow, reportData.TotalCount.ToString(), JustificationValues.Center);
+            AddTableCell(dataRow, reportData.NormalCount.ToString(), JustificationValues.Center, "92D050");
+            AddTableCell(dataRow, reportData.ErrorCount.ToString(), JustificationValues.Center, "C5504B");
+            AddTableCell(dataRow, reportData.SuccessRate, JustificationValues.Center);
             body.AppendChild(new Paragraph());
 
             var detailTable = body.AppendChild(new Table());
-            var colWidths = new[] { "800", "1000", "1200", "800", "700", "1000", "800", "700", "1000" };
-            ConfigureTable(detailTable, colWidths);
+            ConfigureTable(detailTable);
             var detailHeaderRow = detailTable.AppendChild(new TableRow());
-            var headers = new[] { "상태", "기준컬럼ID", "기준컬럼명", "기준타입", "기준길이", "찾은필드명", "파일타입", "파일길이", "비고" };
+            var headers = new[] { "상태", "기준컬럼", "기준타입/길이", "파일타입/길이", "NULL허용", "코드일치", "오류수(NULL/코드)", "비고" };
             foreach (var header in headers) { AddTableCell(detailHeaderRow, header, true); }
 
             foreach (var result in reportData.ValidationResults)
             {
                 var detailDataRow = detailTable.AppendChild(new TableRow());
-                var statusColor = result.Status == "정상" ? "00B050" : "C5504B";
-                AddTableCell(detailDataRow, result.Status ?? "", false, statusColor);
+                var statusColor = result.Status == "정상" ? "92D050" : "C5504B";
+                AddTableCell(detailDataRow, result.Status ?? "", JustificationValues.Center, statusColor);
                 AddTableCell(detailDataRow, result.Std_ColumnId ?? "");
-                AddTableCell(detailDataRow, result.Std_ColumnName ?? "");
-                AddTableCell(detailDataRow, result.Std_Type ?? "");
-                AddTableCell(detailDataRow, result.Std_Length ?? "");
-                AddTableCell(detailDataRow, result.Found_FieldName ?? "");
-                AddTableCell(detailDataRow, result.Cur_Type ?? "");
-                AddTableCell(detailDataRow, result.Cur_Length ?? "");
+                AddTableCell(detailDataRow, $"{result.Std_Type}({result.Std_Length})");
+                AddTableCell(detailDataRow, $"{result.Cur_Type}({result.Cur_Length})");
+                AddTableCell(detailDataRow, ConvertBoolToSymbol(result.IsNotNullCorrect), JustificationValues.Center);
+                AddTableCell(detailDataRow, ConvertBoolToSymbol(result.IsCodeCorrect), JustificationValues.Center);
+                AddTableCell(detailDataRow, $"{result.NotNullErrorCount} / {result.CodeErrorCount}", JustificationValues.Center);
                 AddTableCell(detailDataRow, ReportData.GetRemarks(result));
             }
             body.AppendChild(new Paragraph());
@@ -116,55 +117,94 @@ namespace PureGIS_Geo_QC.Exports
 
         private void CreateFooter(Body body)
         {
-            var footerParagraph = body.AppendChild(new Paragraph());
-            var footerRun = footerParagraph.AppendChild(new Run());
-            footerRun.AppendChild(new RunProperties(new FontSize() { Val = "16" }, new RunFonts() { Ascii = "맑은 고딕", EastAsia = "맑은 고딕" }, new Color() { Val = "808080" }));
-            footerRun.AppendChild(new Text($"보고서 생성: {DateTime.Now:yyyy-MM-dd HH:mm:ss} | PureGIS GEO-QC v1.0 | {ExporterName}"));
-            footerParagraph.ParagraphProperties = new ParagraphProperties(new Justification() { Val = JustificationValues.Right }, new SpacingBetweenLines() { Before = "240" });
+            var p = body.AppendChild(new Paragraph());
+            var r = p.AppendChild(new Run());
+            r.AppendChild(new RunProperties(new FontSize() { Val = "16" }, new RunFonts() { Ascii = "맑은 고딕", EastAsia = "맑은 고딕" }, new Color() { Val = "808080" }));
+            r.AppendChild(new Text($"보고서 생성: {DateTime.Now:yyyy-MM-dd HH:mm:ss} | PureGIS GEO-QC"));
+            p.ParagraphProperties = new ParagraphProperties(new Justification() { Val = JustificationValues.Right }, new SpacingBetweenLines() { Before = "240" });
         }
 
         private void CreateSectionTitle(Body body, string title)
         {
-            var titleParagraph = body.AppendChild(new Paragraph());
-            var titleRun = titleParagraph.AppendChild(new Run());
-            titleRun.AppendChild(new RunProperties(new Bold(), new FontSize() { Val = "20" }, new RunFonts() { Ascii = "맑은 고딕", EastAsia = "맑은 고딕" }, new Color() { Val = "1F497D" }));
-            titleRun.AppendChild(new Text(title));
-            titleParagraph.ParagraphProperties = new ParagraphProperties(new SpacingBetweenLines() { Before = "120", After = "120" });
+            var p = body.AppendChild(new Paragraph());
+            var r = p.AppendChild(new Run());
+            r.AppendChild(new RunProperties(new Bold(), new FontSize() { Val = "24" }, new RunFonts() { Ascii = "맑은 고딕", EastAsia = "맑은 고딕" }, new Color() { Val = "1F497D" }));
+            r.AppendChild(new Text(title));
+            p.ParagraphProperties = new ParagraphProperties(new SpacingBetweenLines() { Before = "120", After = "120" });
         }
 
-        private void ConfigureTable(Table table, string[] columnWidths)
+        private void ConfigureTable(Table table)
         {
-            var tableProps = table.AppendChild(new TableProperties());
-            tableProps.AppendChild(new TableWidth() { Type = TableWidthUnitValues.Pct, Width = "5000" });
-            tableProps.AppendChild(new TableBorders(new TopBorder() { Val = BorderValues.Single, Size = 6 }, new BottomBorder() { Val = BorderValues.Single, Size = 6 }, new LeftBorder() { Val = BorderValues.Single, Size = 6 }, new RightBorder() { Val = BorderValues.Single, Size = 6 }, new InsideHorizontalBorder() { Val = BorderValues.Single, Size = 4 }, new InsideVerticalBorder() { Val = BorderValues.Single, Size = 4 }));
-            var grid = table.AppendChild(new TableGrid());
-            foreach (var width in columnWidths) { grid.AppendChild(new GridColumn() { Width = width }); }
+            var props = new TableProperties(
+                new TableBorders(
+                    new TopBorder() { Val = BorderValues.Single, Size = 4 },
+                    new BottomBorder() { Val = BorderValues.Single, Size = 4 },
+                    new LeftBorder() { Val = BorderValues.Single, Size = 4 },
+                    new RightBorder() { Val = BorderValues.Single, Size = 4 },
+                    new InsideHorizontalBorder() { Val = BorderValues.Single, Size = 2 },
+                    new InsideVerticalBorder() { Val = BorderValues.Single, Size = 2 }
+                ),
+                new TableWidth() { Type = TableWidthUnitValues.Pct, Width = "5000" }
+            );
+            table.AppendChild(props);
         }
 
         private void AddInfoRow(Table table, string label, string value)
         {
             var row = table.AppendChild(new TableRow());
-            AddTableCell(row, label, true, "F2F2F2");
+            AddTableCell(row, label, JustificationValues.Left, "F2F2F2", true);
             AddTableCell(row, value);
         }
-
-        private void AddTableCell(TableRow row, string text, bool isHeader = false, string backgroundColor = null)
+        // 가장 상세한 기능을 가진 기본 메서드
+        private void AddTableCell(TableRow row, string text, JustificationValues justification, string backgroundColor, bool isBold)
         {
             var cell = row.AppendChild(new TableCell());
-            var paragraph = cell.AppendChild(new Paragraph());
-            var run = paragraph.AppendChild(new Run());
-            var runProps = new RunProperties();
-            runProps.AppendChild(new RunFonts() { Ascii = "맑은 고딕", EastAsia = "맑은 고딕" });
-            runProps.AppendChild(new FontSize() { Val = isHeader ? "20" : "18" });
-            if (isHeader) { runProps.AppendChild(new Bold()); runProps.AppendChild(new Color() { Val = "FFFFFF" }); }
-            else if (!string.IsNullOrEmpty(backgroundColor)) { runProps.AppendChild(new Color() { Val = "FFFFFF" }); }
-            run.AppendChild(runProps);
-            run.AppendChild(new Text(text));
-            paragraph.ParagraphProperties = new ParagraphProperties(new Justification() { Val = JustificationValues.Center });
-            var cellProps = cell.AppendChild(new TableCellProperties());
-            if (isHeader) { cellProps.AppendChild(new Shading() { Val = ShadingPatternValues.Clear, Color = "auto", Fill = "1F497D" }); }
-            else if (!string.IsNullOrEmpty(backgroundColor)) { cellProps.AppendChild(new Shading() { Val = ShadingPatternValues.Clear, Color = "auto", Fill = backgroundColor }); }
-            cellProps.AppendChild(new TableCellVerticalAlignment() { Val = TableVerticalAlignmentValues.Center });
+            var p = cell.AppendChild(new Paragraph());
+            var r = p.AppendChild(new Run());
+            var rp = new RunProperties();
+            rp.AppendChild(new RunFonts() { Ascii = "맑은 고딕", EastAsia = "맑은 고딕" });
+            rp.AppendChild(new FontSize() { Val = "18" }); // 9pt
+            if (isBold)
+            {
+                rp.AppendChild(new Bold());
+            }
+
+            // 배경색이 있으면 글자색을 흰색으로
+            if (!string.IsNullOrEmpty(backgroundColor))
+            {
+                rp.AppendChild(new Color() { Val = "FFFFFF" });
+            }
+
+            r.AppendChild(rp);
+            r.AppendChild(new Text(text));
+            p.ParagraphProperties = new ParagraphProperties(new Justification() { Val = justification });
+
+            var cp = new TableCellProperties(new TableCellVerticalAlignment() { Val = TableVerticalAlignmentValues.Center });
+            if (!string.IsNullOrEmpty(backgroundColor))
+            {
+                cp.AppendChild(new Shading() { Val = ShadingPatternValues.Clear, Color = "auto", Fill = backgroundColor });
+            }
+            cell.AppendChild(cp);
+        }
+
+        // 위 기본 메서드를 호출하는 다양한 오버로딩(Overloading) 메서드들
+        private void AddTableCell(TableRow row, string text)
+        {
+            AddTableCell(row, text, JustificationValues.Left, null, false);
+        }
+        private void AddTableCell(TableRow row, string text, JustificationValues justification)
+        {
+            AddTableCell(row, text, justification, null, false);
+        }
+
+        private void AddTableCell(TableRow row, string text, JustificationValues justification, string backgroundColor)
+        {
+            AddTableCell(row, text, justification, backgroundColor, false);
+        }
+
+        private void AddTableCell(TableRow row, string text, bool isHeader)
+        {
+            AddTableCell(row, text, JustificationValues.Center, isHeader ? "1F497D" : null, isHeader);
         }
     }
 }

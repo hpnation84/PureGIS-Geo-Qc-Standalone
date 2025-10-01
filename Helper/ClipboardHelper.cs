@@ -18,32 +18,27 @@ namespace PureGIS_Geo_QC.Helpers
         /// <returns>각 행(row)을 string[]로 담고 있는 리스트</returns>
         public static List<string[]> ParseClipboardGridData(string clipboardText)
         {
-            // 최종 결과를 담을 리스트를 생성합니다.
             var result = new List<string[]>();
 
-            // 클립보드 데이터가 비어있으면 아무것도 하지 않고 빈 리스트를 반환합니다.
             if (string.IsNullOrEmpty(clipboardText))
             {
                 return result;
             }
 
-            // 1. 먼저 텍스트를 줄 바꿈 문자 기준으로 나누어 각 '행'을 분리합니다.
-            //    \r\n (Windows)과 \n (Unix/Mac)을 모두 처리하기 위해 배열로 지정합니다.
-            var rows = clipboardText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            // 1. 엑셀 등에서 복사할 때 마지막에 추가될 수 있는 불필요한 줄바꿈 문자를 먼저 제거합니다.
+            //    이렇게 하면 마지막 빈 줄 때문에 생기는 문제를 방지할 수 있습니다.
+            string normalizedText = clipboardText.TrimEnd(new[] { '\r', '\n' });
 
-            // 2. 각 행을 순회하면서 처리합니다.
+            // 2. 텍스트를 줄 바꿈 문자 기준으로 나누어 각 '행'을 분리합니다.
+            var rows = normalizedText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+            // 3. 각 행을 순회하면서 처리합니다.
             foreach (var row in rows)
-            {
-                // 마지막 줄이 비어있는 경우가 많으므로, 빈 행은 건너뜁니다.
-                if (string.IsNullOrEmpty(row))
-                {
-                    continue;
-                }
-
-                // 3. 한 개의 행(row)을 탭(\t) 문자를 기준으로 나누어 '열'들을 분리합니다.
+            {              
+                // 4. 한 개의 행(row)을 탭(\t) 문자를 기준으로 나누어 '열'들을 분리합니다.
                 var columns = row.Split('\t');
 
-                // 4. 분리된 열 데이터를 최종 결과 리스트에 추가합니다.
+                // 5. 분리된 열 데이터를 최종 결과 리스트에 추가합니다.
                 result.Add(columns);
             }
 

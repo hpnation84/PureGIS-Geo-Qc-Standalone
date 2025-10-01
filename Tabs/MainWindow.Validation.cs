@@ -306,7 +306,6 @@ namespace PureGIS_Geo_QC_Standalone
                         Std_ColumnName = stdCol.ColumnName,
                         Std_Type = stdCol.Type,
                         Std_Length = stdCol.Length
-                        // IsNotNullCorrect와 IsCodeCorrect는 검사 후 결정되므로 기본값 설정 제거
                     };
 
                     // 1. 필드(컬럼) 구조 검사
@@ -326,7 +325,6 @@ namespace PureGIS_Geo_QC_Standalone
                     resultRow.Cur_Type = curTypeName;
                     resultRow.Cur_Length = curScale > 0 ? $"{curPrecision},{curScale}" : curPrecision.ToString();
 
-                    // 타입 검사
                     if (stdCol.Type.Equals("VARCHAR2", StringComparison.OrdinalIgnoreCase))
                         resultRow.IsTypeCorrect = curTypeName.Equals("Character", StringComparison.OrdinalIgnoreCase);
                     else if (stdCol.Type.Equals("NUMBER", StringComparison.OrdinalIgnoreCase))
@@ -334,7 +332,6 @@ namespace PureGIS_Geo_QC_Standalone
                     else
                         resultRow.IsTypeCorrect = stdCol.Type.Equals(curTypeName, StringComparison.OrdinalIgnoreCase);
 
-                    // 길이 검사
                     var (stdPrecision, stdScale) = ParseStandardLength(stdCol.Length);
                     if (stdCol.Type.Equals("VARCHAR2", StringComparison.OrdinalIgnoreCase))
                         resultRow.IsLengthCorrect = (stdPrecision == curPrecision);
@@ -345,30 +342,58 @@ namespace PureGIS_Geo_QC_Standalone
 
                     // 2. 데이터 내용 검사
 
-                    // NOT NULL 검사 로직
-                    if (stdCol.IsNotNull) // NOT NULL 규칙이 설정된 경우에만 검사
+                    // --- NULL 허용 검사 ---
+                    if (stdCol.IsNotNull)
                     {
-                        resultRow.IsNotNullCorrect = true; // 우선 성공으로 가정
+                        resultRow.IsNotNullCorrect = true;
                         foreach (DataRow row in shapefile.DataTable.Rows)
                         {
                             object cellValue = row[stdCol.ColumnId];
                             if (cellValue == null || cellValue == DBNull.Value || string.IsNullOrWhiteSpace(cellValue.ToString()))
                             {
                                 resultRow.NotNullErrorCount++;
-                                resultRow.IsNotNullCorrect = false; // 오류 발견 시 실패로 변경
+                                resultRow.IsNotNullCorrect = false;
                             }
                         }
                     }
-                    // else -> IsNotNullCorrect는 null(검사 안 함) 상태로 유지
 
-                    // 코드 검사 로직
-                    if (!string.IsNullOrEmpty(stdCol.CodeName)) // 코드명이 설정된 경우에만 검사
+                    // --- 코드 일치 검사 ---
+                    if (!string.IsNullOrEmpty(stdCol.CodeName))
                     {
-                        resultRow.IsCodeCorrect = true; // 우선 성공으로 가정
                         CodeSet targetCodeSet = CurrentProject.CodeSets.FirstOrDefault(cs => cs.CodeName.Equals(stdCol.CodeName, StringComparison.OrdinalIgnoreCase));
 
-                        if (targetCodeSet != null)
+                        if (targetCodeSet == null)
                         {
+                            // ▼▼▼ 여기가 수정된 부분입니다! ▼▼▼
+                            resultRow.IsCodeCorrect = false; // 마스터 코드셋이 없으면 무조건 오류
+                                                             // 데이터가 있는 모든 행을 오류로 카운트합니다.
+                            foreach (DataRow row in shapefile.DataTable.Rows)
+                            {
+                                object cellValue = row[stdCol.ColumnId];
+                                if (cellValue != null && cellValue != DBNull.Value && !string.IsNullOrWhiteSpace(cellValue.ToString()))
+                                {
+                                    resultRow.CodeErrorCount++;
+                                }
+                            }
+                            // ▲▲▲ 여기까지 수정 ▲▲▲
+                        }
+                        else if (targetCodeSet.Codes.Count == 0)
+                        {
+                            bool hasAnyData = false;
+                            foreach (DataRow row in shapefile.DataTable.Rows)
+                            {
+                                object cellValue = row[stdCol.ColumnId];
+                                if (cellValue != null && cellValue != DBNull.Value && !string.IsNullOrWhiteSpace(cellValue.ToString()))
+                                {
+                                    resultRow.CodeErrorCount++;
+                                    hasAnyData = true;
+                                }
+                            }
+                            resultRow.IsCodeCorrect = !hasAnyData;
+                        }
+                        else
+                        {
+                            bool allRowsValid = true;
                             foreach (DataRow row in shapefile.DataTable.Rows)
                             {
                                 object cellValue = row[stdCol.ColumnId];
@@ -378,23 +403,17 @@ namespace PureGIS_Geo_QC_Standalone
                                     if (!string.IsNullOrEmpty(valueStr) && !targetCodeSet.Codes.Any(c => c.Code.Equals(valueStr, StringComparison.OrdinalIgnoreCase)))
                                     {
                                         resultRow.CodeErrorCount++;
-                                        resultRow.IsCodeCorrect = false; // 오류 발견 시 실패로 변경
+                                        allRowsValid = false;
                                     }
                                 }
                             }
-                        }
-                        else
-                        {
-                            resultRow.IsCodeCorrect = false; // 코드셋 자체를 찾을 수 없으면 오류
+                            resultRow.IsCodeCorrect = allRowsValid;
                         }
                     }
-                    // else -> IsCodeCorrect는 null(검사 안 함) 상태로 유지
-
 
                     // 3. 최종 상태 결정
                     bool isStructureValid = resultRow.IsFieldFound && resultRow.IsTypeCorrect && resultRow.IsLengthCorrect;
 
-                    // 내용 검사는 규칙이 설정된 경우에만 최종 결과에 영향을 줌
                     bool isContentValid =
                         (!stdCol.IsNotNull || resultRow.IsNotNullCorrect == true) &&
                         (string.IsNullOrEmpty(stdCol.CodeName) || resultRow.IsCodeCorrect == true);
