@@ -118,10 +118,10 @@
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="버전:" Foreground="#FFAAAAAA" FontWeight="Bold" Width="80"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="1.0.0" Foreground="White" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="1.2.0" Foreground="White" FontWeight="SemiBold"/>
 
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="빌드:" Foreground="#FFAAAAAA" FontWeight="Bold"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="2025.09.17" Foreground="White"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="2025.10.01" Foreground="White"/>
 
                                     <TextBlock Grid.Row="4" Grid.Column="0" Text="개발자:" Foreground="#FFAAAAAA" FontWeight="Bold"/>
                                     <TextBlock Grid.Row="4" Grid.Column="1" Text="PureGIS Team (CREW JIN,HONG)" Foreground="White"/>

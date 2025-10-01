@@ -297,6 +297,16 @@
                             <TextBlock Text="💾" FontSize="14"/>
                         </MenuItem.Icon>
                     </MenuItem>
+                    <MenuItem Header="_엑셀에서 기준 가져오기(E)..." Click="ImportFromExcelMenuItem_Click">
+                        <MenuItem.Icon>
+                            <TextBlock Text="📊" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="_엑셀 양식 다운로드(T)" Click="DownloadExcelTemplateMenuItem_Click">
+                        <MenuItem.Icon>
+                            <TextBlock Text="📋" FontSize="14"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <Separator/>
                     <MenuItem Header="_종료(X)" InputGestureText="Alt+F4" Click="ExitMenuItem_Click">
                         <MenuItem.Icon>
@@ -761,7 +771,7 @@
                                Foreground="White" FontSize="14" Margin="10,10,10,5" FontWeight="Bold"/>
 
                                     <DataGrid Name="ResultGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" 
-                              Background="#FF2D2D30" Foreground="White" BorderBrush="Gray" Margin="10,0,10,10" RowHeight="30">
+                              Background="#FF2D2D30" Foreground="White" BorderBrush="Gray" Margin="10,0,10,10" RowHeight="30" MouseDoubleClick="ResultGrid_MouseDoubleClick">
                                         <DataGrid.Columns>
                                             <!-- 상태 -->
                                             <DataGridTextColumn Header="상태" Binding="{Binding Status}" Width="60">

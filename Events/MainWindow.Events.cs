@@ -1,11 +1,14 @@
 ﻿// 파일 경로: MainWindow/Events/MainWindow.Events.cs
 
 using System;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using Microsoft.Win32;
+using PureGIS_Geo_QC.Licensing;
 using PureGIS_Geo_QC.Managers;
 using PureGIS_Geo_QC.WPF;
-using PureGIS_Geo_QC.Licensing;
 
 namespace PureGIS_Geo_QC_Standalone
 {
@@ -120,6 +123,48 @@ namespace PureGIS_Geo_QC_Standalone
                 this.Close();
             }
         }
+        /// <summary>
+        /// ✨ ----- 새로 추가하는 이벤트 핸들러 ----- ✨
+        /// 엑셀에서 기준 가져오기 메뉴 클릭
+        /// </summary>
+        private void ImportFromExcelMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "Excel 파일 (*.xlsx;*.xls)|*.xlsx;*.xls",
+                DefaultExt = ".xlsx"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    // ExcelManager를 통해 프로젝트 데이터 불러오기
+                    var importedProject = ExcelManager.ImportProjectFromExcel(openFileDialog.FileName);
+
+                    // 현재 프로젝트에 병합 (기존 프로젝트가 있으면 덮어쓰기 확인)
+                    if (CurrentProject != null && (CurrentProject.Categories.Any(c => c.Tables.Any()) || CurrentProject.CodeSets.Any()))
+                    {
+                        var result = CustomMessageBox.Show(this, "가져오기 확인", "현재 프로젝트에 엑셀 데이터를 덮어쓰시겠습니까?", true);
+                        if (result != true) return; // '아니오'를 누르면 중단
+                    }
+
+                    // 현재 프로젝트를 불러온 데이터로 교체
+                    CurrentProject = importedProject;
+
+                    CustomMessageBox.Show(this, "완료", "엑셀에서 기준 정보를 성공적으로 가져왔습니다.");
+                }
+                catch (FileNotFoundException fnfEx)
+                {
+                    CustomMessageBox.Show(this, "파일 오류", $"파일을 찾을 수 없습니다: {fnfEx.Message}");
+                }
+                catch (Exception ex)
+                {
+                    CustomMessageBox.Show(this, "가져오기 오류", $"엑셀 파일을 읽는 중 오류가 발생했습니다: {ex.Message}");
+                }
+            }
+        }
+
 
         /// <summary>
         /// 프로그램 정보 메뉴 클릭
@@ -151,6 +196,31 @@ namespace PureGIS_Geo_QC_Standalone
                 CustomMessageBox.Show(this, "오류", $"정보 창을 여는 중 오류가 발생했습니다: {ex.Message}");
             }
         }
+        /// <summary>
+        /// 엑셀 양식 다운로드 메뉴 클릭
+        /// </summary>
+        private void DownloadExcelTemplateMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Excel 파일 (*.xlsx)|*.xlsx",
+                FileName = "PureGIS_입력양식.xlsx"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    ExcelManager.CreateSampleExcelFile(saveFileDialog.FileName);
+                    CustomMessageBox.Show(this, "완료", $"엑셀 양식 파일이 저장되었습니다.\n\n경로: {saveFileDialog.FileName}");
+                }
+                catch (Exception ex)
+                {
+                    CustomMessageBox.Show(this, "오류", $"엑셀 양식 파일을 생성하는 중 오류가 발생했습니다: {ex.Message}");
+                }
+            }
+        }
+
         /// <summary>
         /// Ctrl+V로 데이터 붙여넣기
         /// </summary>

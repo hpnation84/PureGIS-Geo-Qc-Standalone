@@ -100,8 +100,24 @@ namespace PureGIS_Geo_QC.Models
 
         public bool? IsCodeCorrect { get; set; } // 코드값 검사 결과
         public int CodeErrorCount { get; set; } = 0; // 코드값 오류 개수
+        public List<ErrorDetail> NullErrorValues { get; set; } = new List<ErrorDetail>();/// NULL 값 오류가 발생한 행의 데이터를 저장하는 리스트
+        public List<ErrorDetail> CodeErrorValues { get; set; } = new List<ErrorDetail>(); /// 코드 불일치 오류가 발생한 행의 데이터를 저장하는 리스트
     }
+    /// <summary>
+    /// 오류 상세 정보를 담는 클래스
+    /// </summary>
+    public class ErrorDetail
+    {
+        /// <summary>
+        /// 객체 식별자 (예: "ID: 12345" 또는 "행: 5")
+        /// </summary>
+        public string Identifier { get; set; }
 
+        /// <summary>
+        /// 실제 오류 내용 (예: "'ABC' (코드 불일치)")
+        /// </summary>
+        public string ErrorDescription { get; set; }
+    }
     /// <summary>
     /// 파일의 컬럼 정보를 표시하기 위한 클래스
     /// </summary>

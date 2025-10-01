@@ -298,6 +298,17 @@ namespace PureGIS_Geo_QC_Standalone
             var results = new List<ColumnValidationResult>();
             try
             {
+                string idColumnName = null;
+                var possibleIdColumns = new List<string> { "FTR_IDN", "FID", "OBJECTID", "ID" };
+                foreach (var colName in possibleIdColumns)
+                {
+                    if (shapefile.DataTable.Columns.Contains(colName))
+                    {
+                        idColumnName = colName;
+                        break;
+                    }
+                }
+
                 foreach (var stdCol in standardTable.Columns)
                 {
                     var resultRow = new ColumnValidationResult
@@ -353,6 +364,10 @@ namespace PureGIS_Geo_QC_Standalone
                             {
                                 resultRow.NotNullErrorCount++;
                                 resultRow.IsNotNullCorrect = false;
+                                // 오류 값 저장
+                                int rowIndex = shapefile.DataTable.Rows.IndexOf(row) + 1;
+                                string identifier = idColumnName != null ? $"{idColumnName}: {row[idColumnName]}" : $"행: {rowIndex}";
+                                resultRow.NullErrorValues.Add(new ErrorDetail { Identifier = identifier, ErrorDescription = "[NULL 또는 빈 값]" });
                             }
                         }
                     }
@@ -363,8 +378,7 @@ namespace PureGIS_Geo_QC_Standalone
                         CodeSet targetCodeSet = CurrentProject.CodeSets.FirstOrDefault(cs => cs.CodeName.Equals(stdCol.CodeName, StringComparison.OrdinalIgnoreCase));
 
                         if (targetCodeSet == null)
-                        {
-                            // ▼▼▼ 여기가 수정된 부분입니다! ▼▼▼
+                        {                            
                             resultRow.IsCodeCorrect = false; // 마스터 코드셋이 없으면 무조건 오류
                                                              // 데이터가 있는 모든 행을 오류로 카운트합니다.
                             foreach (DataRow row in shapefile.DataTable.Rows)
@@ -373,9 +387,12 @@ namespace PureGIS_Geo_QC_Standalone
                                 if (cellValue != null && cellValue != DBNull.Value && !string.IsNullOrWhiteSpace(cellValue.ToString()))
                                 {
                                     resultRow.CodeErrorCount++;
+                                    // 오류 값 저장
+                                    int rowIndex = shapefile.DataTable.Rows.IndexOf(row) + 1;
+                                    string identifier = idColumnName != null ? $"{idColumnName}: {row[idColumnName]}" : $"행: {rowIndex}";
+                                    resultRow.CodeErrorValues.Add(new ErrorDetail { Identifier = identifier, ErrorDescription = $"'{cellValue}' (기준 코드셋 없음)" });
                                 }
-                            }
-                            // ▲▲▲ 여기까지 수정 ▲▲▲
+                            }                            
                         }
                         else if (targetCodeSet.Codes.Count == 0)
                         {
@@ -404,6 +421,10 @@ namespace PureGIS_Geo_QC_Standalone
                                     {
                                         resultRow.CodeErrorCount++;
                                         allRowsValid = false;
+                                        // 오류 값 저장
+                                        int rowIndex = shapefile.DataTable.Rows.IndexOf(row) + 1;
+                                        string identifier = idColumnName != null ? $"{idColumnName}: {row[idColumnName]}" : $"행: {rowIndex}";
+                                        resultRow.CodeErrorValues.Add(new ErrorDetail { Identifier = identifier, ErrorDescription = $"'{valueStr}'" });
                                     }
                                 }
                             }
