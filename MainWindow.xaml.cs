@@ -1,30 +1,34 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using DotSpatial.Data;
+using Microsoft.Win32;
+using PdfSharpCore.Fonts;
+using PureGIS_Geo_QC.Helpers;
+using PureGIS_Geo_QC.Licensing;
+using PureGIS_Geo_QC.Managers;
+using PureGIS_Geo_QC.Models;
+using PureGIS_Geo_QC.WPF;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
+using System.Windows.Data;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using DotSpatial.Data;
-using Microsoft.Win32;
-using PdfSharpCore.Fonts;
 
-using PureGIS_Geo_QC.Licensing;
-using PureGIS_Geo_QC.Managers;
-using PureGIS_Geo_QC.Models;
-using PureGIS_Geo_QC.WPF;
-
+using LicenseManager = PureGIS_Geo_QC.Licensing.LicenseManager;
 // 이름 충돌을 피하기 위한 using 별칭(alias) 사용
 using TableDefinition = PureGIS_Geo_QC.Models.TableDefinition;
 
@@ -193,9 +197,7 @@ namespace PureGIS_Geo_QC_Standalone
             private set
             {
                 currentProject = value;
-                UpdateProjectUI(); // 기준 정의 탭 UI 업데이트
-                // ===== 👇 [수정] 코드 관리 탭 UI를 새로고침하는 코드를 여기에 추가합니다. =====
-                RefreshCodeSetList();
+                UpdateProjectUI();
             }
         }
         /// <summary>
@@ -215,11 +217,87 @@ namespace PureGIS_Geo_QC_Standalone
             {
                 System.Diagnostics.Debug.WriteLine($"UpdateTableList 오류: {ex.Message}");
             }
-        }        
+        }
+        /// <summary>
+        /// DataGrid에 엑셀 스타일의 붙여넣기를 처리하는 범용 메서드 (안정성 최종 강화 버전)
+        /// </summary>
+        /// <param name="grid">붙여넣기를 적용할 DataGrid</param>
+        private void HandleExcelPaste(DataGrid grid)
+        {
+            // 붙여넣기할 데이터 소스가 있는지 먼저 확인합니다.
+            if (!(grid.ItemsSource is IBindingList bindingList)) return;
+
+            try
+            {
+                var clipboardData = ClipboardHelper.ParseClipboardGridData(Clipboard.GetText());
+                if (clipboardData.Count == 0) return;
+
+                // 1. 그리드가 비어있거나 셀 선택이 없을 때를 모두 고려하여 시작 위치를 안전하게 계산합니다.
+                int startRowIndex = grid.CurrentCell != null ? grid.Items.IndexOf(grid.CurrentCell.Item) : 0;
+                if (startRowIndex < 0) startRowIndex = grid.Items.Count > 0 ? grid.Items.Count - 1 : 0;
+
+                int startColumnIndex = grid.CurrentCell != null ? grid.CurrentCell.Column.DisplayIndex : 0;
+
+                for (int r = 0; r < clipboardData.Count; r++)
+                {
+                    int targetRowIndex = startRowIndex + r;
+                    object dataItem;
+
+                    // 2. 행이 부족하면 새로 추가하고, 그 결과(newItem)를 직접 사용합니다.
+                    if (targetRowIndex >= grid.Items.Count)
+                    {
+                        // IBindingList.AddNew()는 새로 추가된 객체를 반환해 줍니다.
+                        dataItem = bindingList.AddNew();
+                        if (dataItem == null) break; // 객체 생성 실패 시 중단
+                    }
+                    else
+                    {
+                        dataItem = grid.Items[targetRowIndex];
+                    }
+
+                    // "NewItemPlaceholder" 같은 임시 객체는 건너뜁니다.
+                    if (dataItem == CollectionView.NewItemPlaceholder) continue;
+
+                    var clipboardRow = clipboardData[r];
+
+                    for (int c = 0; c < clipboardRow.Length; c++)
+                    {
+                        int targetColumnIndex = startColumnIndex + c;
+                        if (targetColumnIndex >= grid.Columns.Count) continue;
+
+                        var column = grid.Columns[targetColumnIndex];
+                        var cellValue = clipboardRow[c];
+
+                        if (column is DataGridBoundColumn boundColumn)
+                        {
+                            var bindingPath = (boundColumn.Binding as Binding)?.Path.Path;
+                            if (string.IsNullOrEmpty(bindingPath)) continue;
+
+                            var property = dataItem.GetType().GetProperty(bindingPath);
+                            if (property != null && property.CanWrite)
+                            {
+                                try
+                                {
+                                    var convertedValue = Convert.ChangeType(cellValue, property.PropertyType);
+                                    property.SetValue(dataItem, convertedValue, null);
+                                }
+                                catch (FormatException) { continue; } // 타입 변환 오류 시 해당 셀은 무시
+                            }
+                        }
+                    }
+                }
+                grid.Items.Refresh(); // UI 강제 새로고침
+            }
+            catch (Exception ex)
+            {
+                CustomMessageBox.Show(this, "붙여넣기 오류", $"데이터를 붙여넣는 중 오류가 발생했습니다:\n{ex.Message}");
+            }
+        }
+
         private async void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             // LicenseManager 인스턴스를 통해 비동기적으로 로그아웃을 호출합니다.
             await LicenseManager.Instance.LogoutAsync();
-        }
+        }        
     }
 }
